@@ -22,13 +22,23 @@ socket.on('room_users', (msg) => {
         var item = document.createElement('li');
         item.textContent = element.username;
         item.className = "list-group-item";
+        if(element.id == socket.id){
+            item.textContent += " (you)";
+        }
         TXT_ROOM_USERS.appendChild(item);
     });
 });
 
 socket.on('send_message', (msg) => {
     let messageContent = " <p class='card'><b>" + msg.username + ": </b>" + msg.message + "</p>";
-    MESSAGE_LIST.innerHTML += messageContent;
+    MESSAGE_LIST.innerHTML = messageContent + MESSAGE_LIST.innerHTML;
+});
+
+socket.on('old_messages', (msg) => {
+    msg.forEach(element => {
+        let messageContent = " <p class='card'><b>" + element.username + ": </b>" + element.content + "</p>";
+        MESSAGE_LIST.innerHTML = messageContent + MESSAGE_LIST.innerHTML;
+    });
 });
 
 /* CHANGE USERNAME */
@@ -51,7 +61,7 @@ function sendMessage(){
             room_id: TXT_ROOM_ID.value,
             message: TXT_MESSAGE.value
         });
-        TXT_MESSAGE.innerHTML = "";
+        TXT_MESSAGE.value = "";
     }
 }
 

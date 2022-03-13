@@ -5,6 +5,11 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
 
+require('dotenv').config()
+
+const mongoDbConnection = require("./helpers/mongoDbConnection")();
+const TableMessage = require("./models/Message");
+
 app.use(express.static('public'))
 
 app.get('/', (req, res) => {
@@ -34,17 +39,32 @@ io.on('connection', (socket) => {
       socket.join(msg.room_id);
       
       io.in(msg.room_id).emit('room_users', allUsers.filter(x => x.room_id == msg.room_id));
+
+      TableMessage.find({
+        roomId: msg.room_id
+      }).then((messages) => {
+        io.to(socket.id).emit('old_messages', messages);
+      }).catch((err) => {
+        console.log(err);
+      });
     });
 
     socket.on("send_message", (msg) => {
       io.in(msg.room_id).emit('send_message', msg);
+      new TableMessage({
+        content: msg.message,
+        roomId: msg.room_id,
+        username: msg.username,
+      }).save();
     });
     
     socket.on('disconnect', () => {
         let removeIndex = allUsers.findIndex( item => item.id === socket.id );
+        let findRoomId = allUsers[removeIndex].room_id;
         allUsers.splice(removeIndex, 1);
 
         io.emit('total_user_count', allUsers.length);
+        io.in(findRoomId).emit('room_users', allUsers.filter(x => x.room_id == findRoomId));
     });
 });
 
